@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sightglass — Refinery Training Simulator v6</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#0c0f14;color:#e2e8f0;font-family:'DM Sans',sans-serif}
+.app{display:grid;grid-template-columns:1fr 290px;height:100vh}
+.canvas-pane{display:flex;flex-direction:column;background:radial-gradient(ellipse at 40% 40%,#0d1a2e 0%,#080c14 80%);border-right:1px solid #1e2530;overflow:hidden}
+.hdr{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid #1e2530;background:rgba(8,12,20,.92);flex-shrink:0}
+.ldot{width:7px;height:7px;border-radius:50%;background:#3b82f6;box-shadow:0 0 7px #3b82f6}
+.htitle{font-family:'Share Tech Mono',monospace;font-size:10px;color:#4b6080;letter-spacing:.1em;text-transform:uppercase}
+.badge{margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;padding:2px 9px;border-radius:3px;border:1px solid currentColor;transition:all .3s}
+canvas{flex:1;display:block;width:100%;min-height:0}
+.ftr{display:flex;gap:14px;padding:6px 16px;border-top:1px solid #1e2530;background:rgba(8,12,20,.92);flex-shrink:0}
+.fs{font-family:'Share Tech Mono',monospace;font-size:10px;color:#4b6080}
+.fs span{color:#c8d8e8}
+/* sidebar */
+.sb{background:#0a0d12;display:flex;flex-direction:column;overflow-y:auto;border-left:1px solid #1e2530}
+.sb::-webkit-scrollbar{width:3px}.sb::-webkit-scrollbar-thumb{background:#1e2530;border-radius:2px}
+.sbs{padding:13px 14px;border-bottom:1px solid #1a2030}
+.sbl{font-family:'Share Tech Mono',monospace;font-size:9px;color:#2d3d50;letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:5px}
+.sbl::after{content:'';flex:1;height:1px;background:#1a2030}
+/* valve slider rows */
+.vrow{display:flex;flex-direction:column;gap:5px;padding:9px 11px;border-radius:7px;border:1px solid #1a2030;background:#0e1218;margin-bottom:7px}
+.vrow:last-child{margin-bottom:0}
+.vrow.open{border-color:#1a4a2a}
+.vrow.warn{border-color:#4a2a00}
+.vtop-row{display:flex;align-items:center;gap:8px}
+.vicon{width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.vinfo{flex:1}
+.vname-inp{font-size:10.5px;font-weight:500;color:#c8d8e8;background:transparent;border:none;outline:none;width:100%;font-family:'DM Sans',sans-serif}
+.vname-inp:focus{color:#60a5fa}
+.vstate{font-family:'Share Tech Mono',monospace;font-size:9px;margin-top:1px}
+.vpct{font-family:'Share Tech Mono',monospace;font-size:10px;color:#e2e8f0;min-width:34px;text-align:right}
+/* custom range */
+.slider-wrap{display:flex;align-items:center;gap:7px;padding:2px 0}
+.slider-wrap label{font-size:9px;color:#4b6080;min-width:14px;font-family:'Share Tech Mono',monospace}
+input[type=range].vslider{flex:1;-webkit-appearance:none;height:4px;border-radius:2px;outline:none;cursor:pointer;transition:background .1s}
+input[type=range].vslider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;border:2px solid #0a0d12;cursor:pointer;transition:background .15s}
+/* preset buttons */
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.pbtn{font-size:10px;padding:6px 5px;border-radius:5px;border:1px solid #1a2030;background:#0e1218;color:#4b6080;cursor:pointer;transition:all .15s;text-align:left;line-height:1.3}
+.pbtn:hover{background:#151c28;color:#c8d8e8}
+.pbtn.on{background:#0c1e3a;color:#60a5fa;border-color:#1e3a7a}
+.pbtn.ok{background:#081e12;color:#4ade80;border-color:#0f4022}
+.pbtn.warn{background:#1e0e04;color:#fb923c;border-color:#4a2000}
+.pbtn.danger{background:#1e0808;color:#f87171;border-color:#4a1010}
+.pbtn.purple{background:#120a28;color:#a78bfa;border-color:#2a1060}
+/* info */
+.icard{background:#0c1018;border:1px solid #1a2030;border-radius:6px;padding:9px 11px}
+.ititle{font-size:11px;font-weight:500;color:#c8d8e8;margin-bottom:4px}
+.idesc{font-size:10px;color:#4b6080;line-height:1.6}
+/* ctrl */
+.ctrl-row{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.ctrl-row:last-child{margin-bottom:0}
+.ctrl-row label{font-size:10px;color:#4b6080;min-width:65px}
+.ctrl-row input[type=range]{flex:1;-webkit-appearance:none;height:3px;background:#1a2030;border-radius:2px;outline:none}
+.ctrl-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#3b82f6;border:2px solid #0a0d12;cursor:pointer}
+.cval{font-family:'Share Tech Mono',monospace;font-size:10px;color:#c8d8e8;min-width:33px;text-align:right}
+.spips{display:flex;gap:2px;margin-top:3px;margin-left:72px}
+.pip{flex:1;height:3px;border-radius:2px;background:#1a2030;transition:background .2s}
+.pip.lit{background:#3b82f6}
+.shint{font-size:9px;color:#2d3d50;margin-top:2px;margin-left:72px;font-family:'Share Tech Mono',monospace}
+/* labels */
+.lrow{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.lrow:last-child{margin-bottom:0}
+.ldotc{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.lrow input{flex:1;font-size:10px;padding:3px 6px;border-radius:4px;border:1px solid #1a2030;background:#0c1018;color:#c8d8e8;outline:none;font-family:'DM Sans',sans-serif}
+.lrow input:focus{border-color:#3b82f6}
+.alert{display:none;margin-top:8px;padding:7px 10px;border-radius:5px;font-size:10px;font-weight:500;border:1px solid;animation:fi .25s}
+@keyframes fi{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.sbcredit{padding:8px 14px;font-family:'Share Tech Mono',monospace;font-size:9px;color:#1a2030;text-align:center;border-top:1px solid #1a2030;margin-top:auto}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="canvas-pane">
+  <div class="hdr">
+    <div class="ldot"></div>
+    <span class="htitle">Sightglass — Refinery Training Simulator</span>
+    <div class="badge" id="badge" style="color:#4b6080">ISOLATED</div>
+  </div>
+  <canvas id="c"></canvas>
+  <div class="ftr">
+    <div class="fs">TEMP <span id="ft">180°C</span></div>
+    <div class="fs">FLOW <span id="ff">2×</span></div>
+    <div class="fs">LEVEL <span id="fl">—</span></div>
+    <div class="fs" style="margin-left:auto">MODE <span id="fmode">Manual</span></div>
+  </div>
+</div>
+
+<div class="sb">
+  <!-- Valve sliders -->
+  <div class="sbs">
+    <div class="sbl">ควบคุม Valve (%)</div>
+    <div class="vrow closed" id="vrow-top">
+      <div class="vtop-row">
+        <div class="vicon" id="vicon-top" style="background:#200808">🔴</div>
+        <div class="vinfo">
+          <input class="vname-inp" id="vname-top" value="Top Block Valve" oninput="render()">
+          <div class="vstate" id="vstate-top" style="color:#ef4444">● CLOSED — 0%</div>
+        </div>
+        <span class="vpct" id="vpct-top">0%</span>
+      </div>
+      <div class="slider-wrap">
+        <label>0%</label>
+        <input type="range" class="vslider" id="vtop" min="0" max="100" value="0" oninput="onValveSlide('top',+this.value)">
+        <label style="min-width:22px">100%</label>
+      </div>
+    </div>
+    <div class="vrow closed" id="vrow-bot">
+      <div class="vtop-row">
+        <div class="vicon" id="vicon-bot" style="background:#200808">🔴</div>
+        <div class="vinfo">
+          <input class="vname-inp" id="vname-bot" value="Bottom Block Valve" oninput="render()">
+          <div class="vstate" id="vstate-bot" style="color:#ef4444">● CLOSED — 0%</div>
+        </div>
+        <span class="vpct" id="vpct-bot">0%</span>
+      </div>
+      <div class="slider-wrap">
+        <label>0%</label>
+        <input type="range" class="vslider" id="vbot" min="0" max="100" value="0" oninput="onValveSlide('bot',+this.value)">
+        <label style="min-width:22px">100%</label>
+      </div>
+    </div>
+    <div class="vrow closed" id="vrow-drain">
+      <div class="vtop-row">
+        <div class="vicon" id="vicon-drain" style="background:#200808">🔴</div>
+        <div class="vinfo">
+          <input class="vname-inp" id="vname-drain" value="Drain Valve" oninput="render()">
+          <div class="vstate" id="vstate-drain" style="color:#ef4444">● CLOSED — 0%</div>
+        </div>
+        <span class="vpct" id="vpct-drain">0%</span>
+      </div>
+      <div class="slider-wrap">
+        <label>0%</label>
+        <input type="range" class="vslider" id="vdrain" min="0" max="100" value="0" oninput="onValveSlide('drain',+this.value)">
+        <label style="min-width:22px">100%</label>
+      </div>
+    </div>
+    <div class="alert" id="alert-box"></div>
+  </div>
+
+  <!-- Presets -->
+  <div class="sbs">
+    <div class="sbl">Preset สถานการณ์</div>
+    <div class="pgrid">
+      <button class="pbtn on"     onclick="setPreset(0)">① Isolated</button>
+      <button class="pbtn"        onclick="setPreset(1)">② Bottom 50%</button>
+      <button class="pbtn"        onclick="setPreset(2)">③ Both open</button>
+      <button class="pbtn ok"     onclick="setPreset(3)">④ Normal flow</button>
+      <button class="pbtn warn"   onclick="setPreset(4)">⑤ Cavitation</button>
+      <button class="pbtn purple" onclick="setPreset(5)">⑥ Phase split</button>
+      <button class="pbtn danger" onclick="setPreset(6)">⑦ Pump dry</button>
+      <button class="pbtn warn"   onclick="setPreset(7)">⑧ ตะกอน/สีผิด</button>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div class="sbs">
+    <div class="sbl">สถานะ</div>
+    <div class="icard">
+      <div class="ititle" id="ititle">ระบบปิด — Isolated</div>
+      <div class="idesc"  id="idesc">ปรับ slider valve หรือเลือก preset เพื่อเริ่ม simulation</div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="sbs">
+    <div class="sbl">ตั้งค่า</div>
+    <div class="ctrl-row">
+      <label>Flow Speed</label>
+      <input type="range" min="1" max="5" step="1" value="2" oninput="setSpd(+this.value)">
+      <span class="cval" id="sv">2×</span>
+    </div>
+    <div class="spips" id="pips">
+      <div class="pip lit"></div><div class="pip lit"></div>
+      <div class="pip"></div><div class="pip"></div><div class="pip"></div>
+    </div>
+    <div class="shint" id="shint">Flow ปกติ</div>
+    <div class="ctrl-row" style="margin-top:11px">
+      <label>อุณหภูมิ</label>
+      <input type="range" min="80" max="350" step="10" value="180" oninput="setTemp(+this.value)">
+      <span class="cval" id="tv">180°C</span>
+    </div>
+    <div class="ctrl-row" style="margin-top:8px">
+      <label>Vessel Level</label>
+      <input type="range" min="0" max="100" step="1" value="52" oninput="setVesselLvl(+this.value)">
+      <span class="cval" id="vlv">52%</span>
+    </div>
+  </div>
+
+  <!-- Labels -->
+  <div class="sbs">
+    <div class="sbl">ชื่อชิ้นส่วน</div>
+    <div class="lrow"><div class="ldotc" style="background:#60a5fa"></div><input id="l1" value="Sight Glass Tube" oninput="render()"></div>
+    <div class="lrow"><div class="ldotc" style="background:#a78bfa"></div><input id="l2" value="Vessel / Column" oninput="render()"></div>
+    <div class="lrow"><div class="ldotc" style="background:#fb923c"></div><input id="l3" value="Gate Valve (Handwheel)" oninput="render()"></div>
+    <div class="lrow"><div class="ldotc" style="background:#34d399"></div><input id="l4" value="Float / Level Indicator" oninput="render()"></div>
+    <div class="lrow"><div class="ldotc" style="background:#f59e0b"></div><input id="l5" value="Process Fluid" oninput="render()"></div>
+    <div class="lrow"><div class="ldotc" style="background:#38bdf8"></div><input id="l6" value="Stand Pipe" oninput="render()"></div>
+    <div class="lrow"><div class="ldotc" style="background:#f472b6"></div><input id="l7" value="Ball Check Valve" oninput="render()"></div>
+  </div>
+
+  <div class="sbcredit">REFINERY SIGHTGLASS SIMULATOR v7.0 — BALL CHECK + 2-PHASE</div>
+</div>
+</div>
+
+<script>
+const cv=document.getElementById('c');
+const g=cv.getContext('2d');
+
+// ── State ──────────────────────────────────────────────────────────
+let spd=2, temp=180, t=0, raf=null, lastTs=0;
+let vTopPct=0, vBotPct=0, vDrainPct=0;
+let vesselLvl=0.52;  // 0-1
+let lvlAnim=0;
+let scenario=0;
+let sediment=[];
+
+// Particle pools
+const MAX_P=120;
+const pool=[];
+for(let i=0;i<MAX_P;i++) pool.push({active:false,x:0,y:0,vx:0,vy:0,r:1,a:0,life:0,type:0});
+function getSlot(){for(let i=0;i<MAX_P;i++)if(!pool[i].active)return pool[i];return null;}
+
+const SPD_HINTS=['','ช้ามาก','ปกติ','เร็ว','เร็วมาก — turbulent','สูงสุด — เดือดพล่าน'];
+const PRESETS=[
+  {top:0,  bot:0,  drain:0,  sc:0, title:'ระบบปิด — Isolated',          desc:'Valve ทุกตัวปิดสนิท ไม่มีของเหลวใน gauge glass',                                        badge:'ISOLATED',    col:'#4b6080',cls:'on'},
+  {top:0,  bot:50, drain:0,  sc:1, title:'เปิด Bottom 50%',              desc:'Bottom valve เปิดครึ่งทาง ของเหลวไหลเข้าช้า ระดับใน glass ขึ้นจากล่าง',               badge:'FILLING ↑',   col:'#f59e0b',cls:'on'},
+  {top:100,bot:100,drain:0,  sc:2, title:'Both Open — กำลังขึ้น',        desc:'Valve บนและล่างเปิด 100% ของเหลวขึ้นเร็วสุด ปรับ Flow Speed เพื่อดูความต่าง',        badge:'FILLING ↑↑',  col:'#3b82f6',cls:'on'},
+  {top:100,bot:100,drain:0,  sc:3, title:'Normal Flow — สถานะดี',         desc:'INLET→OUTLET ไหลปกติ เรียบ สม่ำเสมอ บันทึกค่าใน log ทุก 2 ชั่วโมง',               badge:'NORMAL ✓',    col:'#22c55e',cls:'ok'},
+  {top:100,bot:100,drain:0,  sc:4, title:'Cavitation — แจ้ง Control!',    desc:'เห็นฟองอากาศจำนวนมาก flow สั่น สัญญาณ cavitation หรือ flash vaporization',         badge:'CAVITATION',  col:'#f97316',cls:'warn'},
+  {top:100,bot:100,drain:0,  sc:5, title:'Phase Separation',              desc:'เห็นของเหลว 2 ชั้น hydrocarbon บน / water ล่าง ต้องปรับ interface control',        badge:'PHASE SPLIT', col:'#a78bfa',cls:'purple'},
+  {top:100,bot:100,drain:0,  sc:6, title:'Pump Running Dry — หยุดทันที!', desc:'ไม่มีของเหลวใน glass เลย Pump กำลัง run dry หยุดทันที ก่อน seal พัง',           badge:'PUMP DRY !!', col:'#ef4444',cls:'danger'},
+  {top:100,bot:100,drain:0,  sc:7, title:'ตะกอน / สีผิดปกติ',            desc:'ของเหลวขุ่น มีตะกอน อาจเกิดจาก coking, scale, corrosion วางแผน inspection',       badge:'ABNORMAL',    col:'#f59e0b',cls:'warn'},
+];
+
+// ── Valve helpers ──────────────────────────────────────────────────
+function updateValveUI(id,pct){
+  const open=pct>5;
+  const row=document.getElementById('vrow-'+id);
+  row.className='vrow '+(open?'open':'closed');
+  const ic=document.getElementById('vicon-'+id);
+  let col,txt;
+  if(pct===0){col='#200808';txt='🔴';}
+  else if(pct<40){col='#2a1500';txt='🟡';}
+  else if(pct<80){col='#0d2a18';txt='🟡';}
+  else{col='#0a1e12';txt='🟢';}
+  ic.style.background=col;ic.textContent=txt;
+  const st=document.getElementById('vstate-'+id);
+  const stCol=pct===0?'#ef4444':pct<50?'#f59e0b':'#4ade80';
+  st.style.color=stCol;
+  st.textContent=pct===0?`● CLOSED — 0%`:pct===100?`● OPEN — 100%`:`● THROTTLE — ${pct}%`;
+  document.getElementById('vpct-'+id).textContent=pct+'%';
+  // update slider gradient
+  const sl=document.getElementById('v'+id);
+  const pctStyle=`linear-gradient(to right,#3b82f6 ${pct}%,#1a2030 ${pct}%)`;
+  sl.style.background=pctStyle;
+  const thumbCol=pct===0?'#ef4444':pct===100?'#4ade80':'#f59e0b';
+  sl.style.setProperty('--tc',thumbCol);
+}
+
+function onValveSlide(id,pct){
+  if(id==='top')vTopPct=pct;
+  else if(id==='bot')vBotPct=pct;
+  else vDrainPct=pct;
+  updateValveUI(id,pct);
+  scenario=-1;
+  document.getElementById('fmode').textContent='Manual';
+  document.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('on','ok','warn','danger','purple'));
+  updateInfoFromValves();
+}
+
+function setValveSlider(id,pct){
+  document.getElementById('v'+id).value=pct;
+  if(id==='top')vTopPct=pct;
+  else if(id==='bot')vBotPct=pct;
+  else vDrainPct=pct;
+  updateValveUI(id,pct);
+}
+
+function updateInfoFromValves(){
+  const topOpen=vTopPct>5, botOpen=vBotPct>5, drainOpen=vDrainPct>5;
+  let title,desc,badge,col;
+  if(!topOpen&&!botOpen&&!drainOpen){title='ระบบปิด — Isolated';desc='Valve ทุกตัวปิด ไม่มีการไหล';badge='ISOLATED';col='#4b6080';}
+  else if(!topOpen&&botOpen&&!drainOpen){title='Bottom Valve เปิด '+vBotPct+'%';desc='ของเหลวไหลเข้าจากด้านล่าง ยังไม่เปิด top valve';badge='FILLING ↑';col='#f59e0b';}
+  else if(topOpen&&!botOpen){title='⚠ Top เปิด แต่ Bottom ปิด!';desc='ควรเปิด Bottom ก่อน Top เสมอ ป้องกัน thermal shock';badge='WRONG ORDER';col='#ef4444';}
+  else if(topOpen&&botOpen&&!drainOpen){title:`Both Open (Top ${vTopPct}% / Bot ${vBotPct}%)`;desc='ของเหลวไหลผ่าน sightglass ปกติ INLET→OUTLET';badge='FLOWING';col:'#22c55e';}
+  else if(drainOpen&&(topOpen||botOpen)){title='⚠ Drain เปิดพร้อม Block Valve';desc='ระวัง! ของเหลวไหลออก drain ขณะ block valve ยังเปิด';badge='CHECK DRAIN';col='#f97316';}
+  else if(drainOpen){title='Drain เปิด '+vDrainPct+'% — กำลัง Depressurize';desc='ระบายความดันและของเหลวออก ทำก่อนงาน maintenance';badge:'DRAINING';col:'#a78bfa';}
+  else{title='Check valve configuration';desc='ตรวจสอบ valve combination';badge='CHECK';col='#64748b';}
+  document.getElementById('ititle').textContent=title;
+  document.getElementById('idesc').textContent=desc;
+  const b=document.getElementById('badge');b.textContent=badge;b.style.color=col;b.style.borderColor=col;
+  showAlert();
+}
+
+function showAlert(){
+  const box=document.getElementById('alert-box');
+  if(vTopPct>5&&vBotPct<5){box.style.display='block';box.style.color='#fca5a5';box.style.borderColor='#7f1d1d';box.style.background='#1e0808';box.textContent='⚠ ควรเปิด Bottom ก่อน Top เสมอ!';}
+  else if(vDrainPct>5&&(vTopPct>5||vBotPct>5)){box.style.display='block';box.style.color='#fed7aa';box.style.borderColor='#6a2800';box.style.background='#1e0e04';box.textContent='⚠ อย่าเปิด Drain ขณะ Block valve ยังเปิดอยู่!';}
+  else box.style.display='none';
+}
+
+function setPreset(p){
+  const pr=PRESETS[p];scenario=p;
+  setValveSlider('top',pr.top);setValveSlider('bot',pr.bot);setValveSlider('drain',pr.drain);
+  sediment=[];pool.forEach(q=>q.active=false);
+  if(p===0||p===1)lvlAnim=0;
+  document.getElementById('ititle').textContent=pr.title;
+  document.getElementById('idesc').textContent=pr.desc;
+  const b=document.getElementById('badge');b.textContent=pr.badge;b.style.color=pr.col;b.style.borderColor=pr.col;
+  document.querySelectorAll('.pbtn').forEach((btn,i)=>{btn.className='pbtn';if(i===p)btn.classList.add(pr.cls);});
+  document.getElementById('fmode').textContent='Preset '+(p+1);
+  document.getElementById('alert-box').style.display='none';
+}
+
+function setSpd(v){spd=v;document.getElementById('sv').textContent=v+'×';document.getElementById('ff').textContent=v+'×';document.getElementById('shint').textContent=SPD_HINTS[v];document.querySelectorAll('.pip').forEach((p,i)=>p.classList.toggle('lit',i<v));}
+function setTemp(v){temp=v;document.getElementById('tv').textContent=v+'°C';document.getElementById('ft').textContent=v+'°C';}
+function setVesselLvl(v){vesselLvl=v/100;lvlAnim=vesselLvl;document.getElementById('vlv').textContent=v+'%';document.getElementById('fl').textContent=v+'%';}
+
+function getEffectiveSc(){
+  if(scenario>=0)return scenario;
+  const topOpen=vTopPct>5,botOpen=vBotPct>5;
+  if(!topOpen&&!botOpen)return 0;
+  if(botOpen&&!topOpen)return 1;
+  if(topOpen&&botOpen)return 3;
+  return 0;
+}
+
+// ── Draw helpers ──────────────────────────────────────────────────
+function resize(){cv.width=cv.clientWidth;cv.height=cv.clientHeight;}
+function lerp(a,b,n){return a+(b-a)*n;}
+function rr(x,y,w,h,r=8){g.beginPath();g.moveTo(x+r,y);g.lineTo(x+w-r,y);g.quadraticCurveTo(x+w,y,x+w,y+r);g.lineTo(x+w,y+h-r);g.quadraticCurveTo(x+w,y+h,x+w-r,y+h);g.lineTo(x+r,y+h);g.quadraticCurveTo(x,y+h,x,y+h-r);g.lineTo(x,y+r);g.quadraticCurveTo(x,y,x+r,y);g.closePath();}
+function getFC(){const p=Math.min(1,(temp-80)/270);return{r:Math.round(lerp(60,100,p)),g:Math.round(lerp(120,80,p)),b:Math.round(lerp(220,160,p))};}
+
+// Draw 3D-ish vessel with 2-phase: GAS (top) + LIQUID (bottom)
+function drawVessel(cx,cy,R){
+  // outer dark shell
+  const og=g.createRadialGradient(cx-R*.35,cy-R*.3,R*.05,cx,cy,R);
+  og.addColorStop(0,'#2a3545');og.addColorStop(.4,'#1a2535');og.addColorStop(.75,'#111820');og.addColorStop(1,'#080c14');
+  g.beginPath();g.arc(cx,cy,R,0,Math.PI*2);g.fillStyle=og;g.fill();
+  g.strokeStyle='#0a1220';g.lineWidth=2;g.stroke();
+
+  // clip everything inside vessel
+  g.save();g.beginPath();g.arc(cx,cy,R-3,0,Math.PI*2);g.clip();
+
+  const fc=getFC();
+  const lvlY=cy+R-(vesselLvl*R*2);  // liquid surface Y
+
+  // ── GAS PHASE (top zone) ──
+  // Vapour / gas background — dark blue-grey
+  const gg=g.createLinearGradient(cx,cy-R,cx,lvlY);
+  gg.addColorStop(0,'rgba(18,28,50,0.95)');
+  gg.addColorStop(.5,'rgba(22,34,58,0.88)');
+  gg.addColorStop(1,'rgba(28,40,64,0.80)');
+  g.fillStyle=gg;g.fillRect(cx-R,cy-R,R*2,lvlY-(cy-R)+2);
+
+  // gas molecule wisps / heat shimmer
+  for(let i=0;i<6;i++){
+    const wx=cx-R*0.65+i*(R*0.26);
+    const wy=cy-R*0.6+R*0.3*Math.sin(t*0.7+i*1.1)+5*Math.sin(t*1.3+i*0.8);
+    const ra=R*0.09+R*0.04*Math.sin(t*1.1+i);
+    const ga=g.createRadialGradient(wx,wy,0,wx,wy,ra);
+    ga.addColorStop(0,'rgba(100,160,255,0.10)');ga.addColorStop(1,'rgba(100,160,255,0)');
+    g.fillStyle=ga;g.beginPath();g.arc(wx,wy,ra,0,Math.PI*2);g.fill();
+  }
+  // rising gas bubbles from liquid surface
+  for(let i=0;i<4;i++){
+    const bx=cx-R*0.5+i*(R*0.33)+R*0.06*Math.sin(t*1.5+i*2.1);
+    const phase=((t*0.4+i*0.7)%1);
+    const by=lvlY-phase*(lvlY-(cy-R*0.7));
+    const br=1.2+1.5*Math.sin(t*2+i);
+    const ba=0.18*(1-phase);
+    g.beginPath();g.arc(bx,by,Math.max(0.5,br),0,Math.PI*2);
+    g.strokeStyle=`rgba(140,190,255,${ba})`;g.lineWidth=0.8;g.stroke();
+  }
+  // GAS label zone
+  g.save();
+  g.font=`bold ${Math.round(R*.13)}px 'Share Tech Mono',monospace`;
+  g.fillStyle='rgba(100,160,255,0.45)';g.textAlign='center';g.textBaseline='middle';
+  const gasMidY=cy-R+(lvlY-(cy-R))*0.45;
+  if(vesselLvl<0.92)g.fillText('GAS / VAPOUR',cx,gasMidY);
+  g.restore();
+
+  // ── LIQUID PHASE (bottom zone) ──
+  const lg=g.createLinearGradient(cx-R,lvlY,cx+R,cy+R);
+  lg.addColorStop(0,`rgba(${fc.r},${fc.g},${fc.b},0.82)`);
+  lg.addColorStop(.5,`rgba(${fc.r+20},${fc.g+15},${fc.b+20},0.92)`);
+  lg.addColorStop(1,`rgba(${fc.r-10},${fc.g-10},${fc.b-20},0.88)`);
+  g.fillStyle=lg;g.fillRect(cx-R,lvlY,R*2,cy+R-lvlY+4);
+
+  // interface surface wave
+  if(vesselLvl>0.03&&vesselLvl<0.98){
+    for(let xi=-R;xi<R;xi+=3){
+      const wy=lvlY+2.5*Math.sin((xi+t*28)*0.1+t*1.15);
+      g.fillStyle=`rgba(${fc.r+60},${fc.g+50},${fc.b+60},0.38)`;
+      g.fillRect(cx+xi,wy-1,3,4);
+    }
+  }
+
+  // ── INTERFACE LINE (liquid surface) ──
+  if(vesselLvl>0.02&&vesselLvl<0.98){
+    g.save();
+    g.strokeStyle='rgba(56,189,248,0.55)';g.lineWidth=1.2;
+    g.setLineDash([4,3]);
+    g.beginPath();g.moveTo(cx-R+4,lvlY);g.lineTo(cx+R-4,lvlY);g.stroke();
+    g.setLineDash([]);
+    // interface label on right side
+    g.font=`${Math.round(R*.1)}px 'Share Tech Mono',monospace`;
+    g.fillStyle='rgba(56,189,248,0.7)';g.textAlign='left';g.textBaseline='middle';
+    g.fillText('L/G',cx+R*0.55,lvlY);
+    g.restore();
+  }
+
+  // highlight dome on liquid
+  const hg=g.createRadialGradient(cx,lvlY+R*.3,0,cx,lvlY+R*.4,R*.7);
+  hg.addColorStop(0,`rgba(${fc.r+80},${fc.g+70},${fc.b+80},0.22)`);
+  hg.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle=hg;g.fillRect(cx-R,lvlY,R*2,R*2);
+
+  // LIQUID label
+  if(vesselLvl>0.12){
+    g.save();
+    g.font=`bold ${Math.round(R*.13)}px 'Share Tech Mono',monospace`;
+    g.fillStyle='rgba(200,220,255,0.55)';g.textAlign='center';g.textBaseline='middle';
+    g.fillText('LIQUID',cx,lvlY+R*(vesselLvl*0.5+0.1));
+    g.restore();
+  }
+  g.restore();
+
+  // glass highlight
+  const hl=g.createRadialGradient(cx-R*.4,cy-R*.35,0,cx-R*.2,cy-R*.15,R*.8);
+  hl.addColorStop(0,'rgba(255,255,255,0.16)');hl.addColorStop(.35,'rgba(255,255,255,0.06)');hl.addColorStop(1,'rgba(255,255,255,0)');
+  g.save();g.beginPath();g.arc(cx,cy,R-3,0,Math.PI*2);g.clip();
+  g.fillStyle=hl;g.fillRect(cx-R,cy-R,R*2,R*2);g.restore();
+
+  // level % text
+  g.save();g.font=`bold ${Math.round(R*.16)}px 'Share Tech Mono',monospace`;
+  g.fillStyle='rgba(200,220,255,0.5)';g.textAlign='center';g.textBaseline='middle';
+  g.fillText(Math.round(vesselLvl*100)+'%',cx,cy+R*.6);g.restore();
+}
+
+// Draw gauge glass tube (vertical sightglass column)
+function drawGaugeGlass(x,y,w,h,lvl,sc,fc){
+  // outer steel collar
+  const shellG=g.createLinearGradient(x-4,0,x+w+4,0);
+  shellG.addColorStop(0,'#101820');shellG.addColorStop(.15,'#2a3a4a');shellG.addColorStop(.4,'#3a5060');
+  shellG.addColorStop(.6,'#3a5060');shellG.addColorStop(.85,'#2a3a4a');shellG.addColorStop(1,'#101820');
+  g.save();rr(x-4,y-2,w+8,h+4,6);g.fillStyle=shellG;g.fill();g.strokeStyle='#080e18';g.lineWidth=1.5;g.stroke();g.restore();
+
+  // glass tube clip area
+  g.save();rr(x,y,w,h,4);g.clip();
+
+  // background
+  g.fillStyle='rgba(6,12,22,0.97)';g.fillRect(x,y,w,h);
+
+  const fillY=y+h*(1-lvl);
+  const fillH=h*lvl;
+
+  if(sc===6){
+    // pump dry — empty with heat haze
+    for(let i=0;i<2;i++){
+      const hy=y+h*(.3+i*.35)+8*Math.sin(t*2+i*2);
+      g.strokeStyle=`rgba(80,110,150,${0.05+0.03*Math.sin(t*2.5+i)})`;
+      g.lineWidth=h*.07;g.beginPath();g.moveTo(x,hy);g.lineTo(x+w,hy);g.stroke();
+    }
+  } else if(sc===5){
+    const split=y+h*0.42;
+    // water (blue)
+    g.fillStyle='rgba(20,50,130,0.85)';g.fillRect(x,split,w,y+h-split);
+    for(let xi=0;xi<w;xi+=2){const wy=split+3*Math.sin(xi*.4+t*2.2);g.fillStyle='rgba(40,100,200,0.5)';g.fillRect(x+xi,wy-1,2,4);}
+    // oil (amber)
+    const og2=g.createLinearGradient(x,y,x+w,y);
+    og2.addColorStop(0,`rgba(${fc.r-20},${fc.g-10},12,0.9)`);og2.addColorStop(.5,`rgba(${fc.r},${fc.g},16,0.95)`);og2.addColorStop(1,`rgba(${fc.r-20},${fc.g-10},12,0.9)`);
+    g.fillStyle=og2;g.fillRect(x,y,w,split-y);
+  } else if(sc===7){
+    g.fillStyle='rgba(28,12,4,0.97)';g.fillRect(x,y,w,h);
+    g.fillStyle='rgba(90,45,10,0.7)';g.fillRect(x,y,w,h);
+    sediment.forEach(s=>{g.beginPath();g.arc(s.x,s.y,s.r,0,Math.PI*2);g.fillStyle=`rgba(${s.c},${s.c-8},${s.c-16},0.7)`;g.fill();});
+  } else if(lvl>0){
+    // fluid gradient
+    const fg=g.createLinearGradient(x,fillY,x+w,fillY+fillH*.3);
+    fg.addColorStop(0,`rgba(${fc.r-15},${fc.g-10},${fc.b-30},0.75)`);
+    fg.addColorStop(1,`rgba(${fc.r},${fc.g},${fc.b},0.95)`);
+    g.fillStyle=fg;g.fillRect(x,fillY,w,fillH);
+
+    // surface wave
+    if(lvl<0.98){
+      const wA=1.5+spd*1.3;
+      for(let xi=0;xi<w;xi+=2){
+        const wy=fillY+wA*Math.sin(xi*.5+t*(1.4+spd*.4));
+        g.fillStyle=`rgba(${fc.r+60},${fc.g+50},${fc.b+60},${0.25+spd*.06})`;
+        g.fillRect(x+xi,wy-2,2,4+spd*.5);
+      }
+    }
+    // particles
+    pool.forEach(p=>{
+      if(!p.active)return;
+      if(p.type===0){g.beginPath();g.arc(p.x,p.y,p.r,0,Math.PI*2);g.fillStyle=`rgba(${fc.r+70},${fc.g+60},${fc.b+70},${p.a})`;g.fill();}
+      else if(p.type===1){g.beginPath();g.arc(p.x,p.y,p.r,0,Math.PI*2);g.strokeStyle=`rgba(180,230,255,${p.a})`;g.lineWidth=.9;g.stroke();}
+    });
+    // horizontal flow streaks
+    if((sc===3||sc===4)&&spd>=3&&lvl>0.2){
+      for(let row=0;row<3;row++){
+        const ry=fillY+fillH*(.2+row*.3);
+        const off2=(t*(18+spd*7)+row*10)%(16+spd*5);
+        g.save();g.setLineDash([5+spd*2,7+spd*2]);g.lineDashOffset=-off2;
+        g.strokeStyle=`rgba(${fc.r+50},${fc.g+40},${fc.b+50},${0.15+spd*.05})`;
+        g.lineWidth=1+spd*.2;g.beginPath();g.moveTo(x,ry);g.lineTo(x+w,ry);g.stroke();
+        g.setLineDash([]);g.restore();
+      }
+    }
+  }
+
+  // mica/glass lens overlay
+  const mic=g.createLinearGradient(x,0,x+w,0);
+  mic.addColorStop(0,'rgba(8,16,28,0.92)');mic.addColorStop(.12,'rgba(25,45,65,0.68)');
+  mic.addColorStop(.3,'rgba(100,165,210,0.1)');mic.addColorStop(.5,'rgba(140,200,240,0.03)');
+  mic.addColorStop(.7,'rgba(100,165,210,0.1)');mic.addColorStop(.88,'rgba(25,45,65,0.68)');
+  mic.addColorStop(1,'rgba(8,16,28,0.92)');
+  g.fillStyle=mic;g.fillRect(x,y,w,h);
+  const ref=g.createLinearGradient(x,0,x+w,0);
+  ref.addColorStop(0,'rgba(255,255,255,0)');ref.addColorStop(.12,'rgba(255,255,255,0.14)');
+  ref.addColorStop(.25,'rgba(255,255,255,0.05)');ref.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=ref;g.fillRect(x,y,w,h);
+
+  // float indicator marker
+  if(sc!==6&&lvl>0.02){
+    const floatY=fillY-4;
+    const fg2=g.createLinearGradient(x,floatY,x+w,floatY+8);
+    fg2.addColorStop(0,'rgba(100,200,255,0.7)');fg2.addColorStop(1,'rgba(60,150,220,0.5)');
+    g.fillStyle=fg2;g.fillRect(x+2,floatY,w-4,4);
+    g.strokeStyle='rgba(150,220,255,0.8)';g.lineWidth=.8;
+    g.beginPath();g.moveTo(x,floatY+2);g.lineTo(x+w,floatY+2);g.stroke();
+  }
+
+  rr(x,y,w,h,4);g.strokeStyle='rgba(80,130,180,0.35)';g.lineWidth=.8;g.stroke();
+  g.restore();
+}
+
+// Draw gate valve (handwheel style)
+function drawGateValve(cx,cy,r,pct){
+  const open=pct>5;
+  // valve body (circular)
+  const bg=g.createRadialGradient(cx-r*.2,cy-r*.2,0,cx,cy,r);
+  bg.addColorStop(0,'#2a3545');bg.addColorStop(.6,open?'#1a3028':'#301818');bg.addColorStop(1,'#0c1218');
+  g.beginPath();g.arc(cx,cy,r,0,Math.PI*2);g.fillStyle=bg;g.fill();
+  g.strokeStyle=open?'#1a5c38':'#5c1a1a';g.lineWidth=2;g.stroke();
+
+  // spokes (handwheel)
+  const spokes=6;
+  g.save();g.lineWidth=2.5;g.lineCap='round';
+  g.strokeStyle=open?'rgba(40,120,70,0.8)':'rgba(120,40,40,0.8)';
+  for(let i=0;i<spokes;i++){
+    const ang=i*(Math.PI*2/spokes)+t*(open?0.3:0.05)*spd;
+    g.beginPath();g.moveTo(cx,cy);
+    g.lineTo(cx+Math.cos(ang)*(r-3),cy+Math.sin(ang)*(r-3));g.stroke();
+  }
+  g.restore();
+
+  // rim ring
+  g.beginPath();g.arc(cx,cy,r-2,0,Math.PI*2);
+  g.strokeStyle=open?'rgba(60,200,100,0.4)':'rgba(200,60,60,0.4)';g.lineWidth=1.5;g.stroke();
+
+  // hub center
+  g.beginPath();g.arc(cx,cy,r*.28,0,Math.PI*2);
+  const hub=g.createRadialGradient(cx-r*.08,cy-r*.08,0,cx,cy,r*.28);
+  hub.addColorStop(0,'#4a5a6a');hub.addColorStop(1,'#1a2530');
+  g.fillStyle=hub;g.fill();
+  g.strokeStyle='#0a1220';g.lineWidth=1;g.stroke();
+
+  // pct label
+  if(pct>0&&pct<100){
+    g.save();g.font=`bold ${Math.round(r*.45)}px 'Share Tech Mono',monospace`;
+    g.fillStyle=open?'rgba(80,220,130,0.9)':'rgba(220,100,80,0.9)';
+    g.textAlign='center';g.textBaseline='middle';g.fillText(pct+'%',cx,cy);g.restore();
+  } else if(pct===0){
+    g.save();g.font=`${Math.round(r*.35)}px 'Share Tech Mono',monospace`;
+    g.fillStyle='rgba(200,80,80,0.8)';g.textAlign='center';g.textBaseline='middle';g.fillText('CL',cx,cy);g.restore();
+  } else {
+    g.save();g.font=`${Math.round(r*.3)}px 'Share Tech Mono',monospace`;
+    g.fillStyle='rgba(80,220,130,0.8)';g.textAlign='center';g.textBaseline='middle';g.fillText('OP',cx,cy);g.restore();
+  }
+}
+
+// Draw Ball Check Valve — shows ball position and flow direction animation
+// cx,cy = center, r = body radius, flowing = bool (fluid flowing forward), dir = 1 (→) or -1 (←)
+function drawBallCheckValve(cx,cy,r,flowing,dir=1){
+  // ── Body housing (horizontal oval/rectangle) ──
+  const bw=r*2.8, bh=r*1.6;
+  const bx=cx-bw/2, by=cy-bh/2;
+
+  // housing shell gradient
+  const hg=g.createLinearGradient(bx,by,bx,by+bh);
+  hg.addColorStop(0,'#1a2a38');hg.addColorStop(.3,'#2a3d50');hg.addColorStop(.7,'#1e3040');hg.addColorStop(1,'#0e1820');
+  g.save();rr(bx,by,bw,bh,bh/2);g.fillStyle=hg;g.fill();
+  g.strokeStyle=flowing?'#1a5c38':'#2a3a4a';g.lineWidth=2;g.stroke();g.restore();
+
+  // inner bore clip
+  const bore=bh*0.52;
+  g.save();
+  g.beginPath();g.ellipse(cx,cy,bw/2-4,bore/2,0,0,Math.PI*2);g.clip();
+  // bore background
+  g.fillStyle='rgba(4,8,18,0.95)';g.fillRect(bx,by,bw,bh);
+
+  // ── FLOW particles through bore (when open) ──
+  if(flowing){
+    const fc=getFC();
+    for(let i=0;i<5;i++){
+      const phase=((t*spd*0.6+i*0.2)%1);
+      const px=cx+(dir===1?(phase-0.5)*bw*0.85:(0.5-phase)*bw*0.85);
+      const py=cy+(Math.random()<0.01?0:0)+(bore*0.25*(Math.sin(t*3+i*1.3)));
+      const pa=0.55*(1-Math.abs(phase-0.5)*1.8);
+      if(pa>0.05){
+        g.beginPath();g.arc(px,py,1.8+spd*0.4,0,Math.PI*2);
+        g.fillStyle=`rgba(${fc.r+60},${fc.g+50},${fc.b+60},${pa})`;g.fill();
+      }
+    }
+    // flow streak lines
+    for(let row=-1;row<=1;row++){
+      const ry=cy+row*(bore*0.22);
+      const off2=(t*(16+spd*8))%(12+spd*3);
+      g.save();g.setLineDash([5+spd*2,6+spd*2]);
+      g.lineDashOffset=dir===1?-off2:off2;
+      g.strokeStyle=`rgba(52,211,153,${0.18+spd*0.04})`;g.lineWidth=0.8;
+      g.beginPath();g.moveTo(cx-bw*0.38,ry);g.lineTo(cx+bw*0.38,ry);g.stroke();
+      g.setLineDash([]);g.restore();
+    }
+  }
+  g.restore();
+
+  // ── BALL ──
+  // Ball floats up/forward when flowing, sits on seat when closed
+  const ballR=bore*0.38;
+  // seat position = slightly downstream of center
+  const seatX=cx+dir*bw*0.14;
+  // open position = ball lifted off seat, pushed upstream
+  const ballOpenX=cx-dir*bw*0.22;
+  const ballOpenY=cy-bore*0.18;
+  const ballClosedX=seatX;
+  const ballClosedY=cy;
+
+  // smooth interpolation
+  const openFrac=flowing?1:0;
+  if(drawBallCheckValve._openFrac===undefined)drawBallCheckValve._openFrac=openFrac;
+  drawBallCheckValve._openFrac=lerp(drawBallCheckValve._openFrac,openFrac,0.06);
+  const f=drawBallCheckValve._openFrac;
+
+  const ballX=lerp(ballClosedX,ballOpenX,f)+Math.sin(t*3)*f*1.5;
+  const bballY=lerp(ballClosedY,ballOpenY,f)+Math.cos(t*2.3)*f*1.2;
+
+  // ball shadow
+  g.save();g.globalAlpha=0.25;
+  g.beginPath();g.ellipse(ballX,bballY+ballR*0.6,ballR*0.75,ballR*0.25,0,0,Math.PI*2);
+  g.fillStyle='rgba(0,0,0,0.8)';g.fill();g.restore();
+
+  // ball body 3D gradient
+  const ballGrad=g.createRadialGradient(bballY-ballR*0.3,bballY-ballR*0.3,0,bballY,bballY,ballR*1.1);
+  const ballG=g.createRadialGradient(ballX-ballR*0.3,bballY-ballR*0.35,0,ballX,bballY,ballR);
+  ballG.addColorStop(0,f>0.3?'#c0d8f8':'#e0b0a0');
+  ballG.addColorStop(0.4,f>0.3?'#4a7ab0':'#a04838');
+  ballG.addColorStop(0.8,f>0.3?'#1a3a60':'#601820');
+  ballG.addColorStop(1,f>0.3?'#0a1828':'#300c0c');
+  g.beginPath();g.arc(ballX,bballY,ballR,0,Math.PI*2);
+  g.fillStyle=ballG;g.fill();
+  g.strokeStyle=f>0.3?'rgba(80,150,220,0.6)':'rgba(200,80,60,0.6)';g.lineWidth=1;g.stroke();
+
+  // ball specular highlight
+  g.beginPath();g.arc(ballX-ballR*0.28,bballY-ballR*0.3,ballR*0.22,0,Math.PI*2);
+  g.fillStyle='rgba(255,255,255,0.35)';g.fill();
+
+  // ── SEAT (angled wedge where ball rests) ──
+  g.save();
+  g.strokeStyle=flowing?'rgba(60,140,80,0.5)':'rgba(200,80,60,0.7)';g.lineWidth=2.5;g.lineCap='round';
+  g.beginPath();g.moveTo(seatX-2,cy-bore*0.38);g.lineTo(seatX+dir*4,cy);g.lineTo(seatX-2,cy+bore*0.38);g.stroke();
+  g.restore();
+
+  // ── STATUS indicator glow ──
+  if(flowing){
+    g.save();g.globalAlpha=0.18+0.08*Math.sin(t*4);
+    g.beginPath();g.arc(cx,cy,bw/2,0,Math.PI*2);
+    const glowG=g.createRadialGradient(cx,cy,bw*0.2,cx,cy,bw/2);
+    glowG.addColorStop(0,'rgba(52,211,153,0.4)');glowG.addColorStop(1,'rgba(52,211,153,0)');
+    g.fillStyle=glowG;g.fill();g.restore();
+  }
+
+  // ── Housing outer stroke again on top ──
+  g.save();rr(bx,by,bw,bh,bh/2);g.strokeStyle=flowing?'rgba(52,200,120,0.5)':'rgba(80,100,130,0.4)';g.lineWidth=1.5;g.stroke();g.restore();
+
+  // ── Flow direction arrows on housing ──
+  const arrY=cy;
+  const arrCol=flowing?'rgba(52,211,153,0.85)':'rgba(80,100,130,0.3)';
+  // draw a small arrow in flow direction
+  const ax=cx+dir*(bw*0.35);
+  const ah=5,aw=7;
+  g.save();g.fillStyle=arrCol;
+  g.beginPath();
+  g.moveTo(ax+dir*aw,arrY);
+  g.lineTo(ax,arrY-ah);g.lineTo(ax,arrY+ah);
+  g.closePath();g.fill();
+  // label OPEN/CLOSED
+  g.font=`bold ${Math.round(r*0.38)}px 'Share Tech Mono',monospace`;
+  g.fillStyle=flowing?'rgba(74,222,128,0.9)':'rgba(180,60,60,0.8)';
+  g.textAlign='center';g.textBaseline='middle';
+  g.fillText(flowing?'OPEN':'SEAT',cx,cy);g.restore();
+
+  // valve type label
+  g.save();g.font=`${Math.round(r*0.28)}px 'Share Tech Mono',monospace`;
+  g.fillStyle='rgba(56,189,248,0.55)';g.textAlign='center';g.textBaseline='top';
+  g.fillText('BALL CHECK',cx,by-14);g.restore();
+}
+
+// Draw pipe segment
+function drawPipe(x,y,w,h,horiz=true){
+  const dim=horiz?w:h;
+  const gr=horiz?g.createLinearGradient(x,y,x,y+h):g.createLinearGradient(x,y,x+w,y);
+  gr.addColorStop(0,'#101828');gr.addColorStop(.2,'#243040');gr.addColorStop(.5,'#384a5c');
+  gr.addColorStop(.8,'#243040');gr.addColorStop(1,'#101828');
+  g.save();rr(x,y,w,h,Math.min(w,h)/2);g.fillStyle=gr;g.fill();
+  g.strokeStyle='#080e18';g.lineWidth=1;g.stroke();g.restore();
+}
+
+// Draw stand pipe (vertical open-top tube with same fluid level as vessel/sightglass)
+function drawStandPipe(x,y,w,h,lvl,sc,fc){
+  // outer steel collar
+  const shellG=g.createLinearGradient(x-3,0,x+w+3,0);
+  shellG.addColorStop(0,'#101820');shellG.addColorStop(.15,'#2a3a4a');shellG.addColorStop(.4,'#3a5060');
+  shellG.addColorStop(.6,'#3a5060');shellG.addColorStop(.85,'#2a3a4a');shellG.addColorStop(1,'#101820');
+  g.save();rr(x-3,y,w+6,h+4,5);g.fillStyle=shellG;g.fill();g.strokeStyle='#080e18';g.lineWidth=1.5;g.stroke();g.restore();
+
+  // glass tube clip area
+  g.save();rr(x,y,w,h,3);g.clip();
+  g.fillStyle='rgba(6,12,22,0.97)';g.fillRect(x,y,w,h);
+
+  if(sc!==6&&lvl>0){
+    const fillY=y+h*(1-lvl);
+    const fillH=h*lvl;
+    // fluid gradient
+    if(sc===5){
+      const split=y+h*0.42;
+      g.fillStyle='rgba(20,50,130,0.85)';g.fillRect(x,split,w,y+h-split);
+      const og2=g.createLinearGradient(x,y,x+w,y);
+      og2.addColorStop(0,`rgba(${fc.r-20},${fc.g-10},12,0.9)`);og2.addColorStop(1,`rgba(${fc.r},${fc.g},16,0.95)`);
+      g.fillStyle=og2;g.fillRect(x,fillY,w,split-fillY);
+    } else if(sc===7){
+      g.fillStyle='rgba(90,45,10,0.7)';g.fillRect(x,fillY,w,fillH);
+    } else {
+      const fg=g.createLinearGradient(x,fillY,x+w,fillY+fillH*.3);
+      fg.addColorStop(0,`rgba(${fc.r-15},${fc.g-10},${fc.b-30},0.75)`);
+      fg.addColorStop(1,`rgba(${fc.r},${fc.g},${fc.b},0.95)`);
+      g.fillStyle=fg;g.fillRect(x,fillY,w,fillH);
+    }
+    // surface wave
+    if(lvl<0.98){
+      for(let xi=0;xi<w;xi+=2){
+        const wA=1.2+spd*.8;
+        const wy=y+h*(1-lvl)+wA*Math.sin(xi*.6+t*(1.4+spd*.4)+1.3);
+        g.fillStyle=`rgba(${fc.r+60},${fc.g+50},${fc.b+60},${0.22+spd*.05})`;
+        g.fillRect(x+xi,wy-2,2,4);
+      }
+    }
+    // liquid surface level line
+    const lineY=y+h*(1-lvl);
+    g.strokeStyle='rgba(150,220,255,0.5)';g.lineWidth=1;
+    g.beginPath();g.moveTo(x,lineY);g.lineTo(x+w,lineY);g.stroke();
+  }
+
+  // mica/glass lens overlay
+  const mic=g.createLinearGradient(x,0,x+w,0);
+  mic.addColorStop(0,'rgba(8,16,28,0.92)');mic.addColorStop(.15,'rgba(25,45,65,0.65)');
+  mic.addColorStop(.35,'rgba(100,165,210,0.08)');mic.addColorStop(.5,'rgba(140,200,240,0.02)');
+  mic.addColorStop(.65,'rgba(100,165,210,0.08)');mic.addColorStop(.85,'rgba(25,45,65,0.65)');
+  mic.addColorStop(1,'rgba(8,16,28,0.92)');
+  g.fillStyle=mic;g.fillRect(x,y,w,h);
+  const ref=g.createLinearGradient(x,0,x+w,0);
+  ref.addColorStop(0,'rgba(255,255,255,0)');ref.addColorStop(.12,'rgba(255,255,255,0.12)');
+  ref.addColorStop(.25,'rgba(255,255,255,0.04)');ref.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=ref;g.fillRect(x,y,w,h);
+
+  rr(x,y,w,h,3);g.strokeStyle='rgba(80,130,180,0.35)';g.lineWidth=.8;g.stroke();
+  g.restore();
+
+  // open top cap lines (showing it's open at top)
+  g.save();
+  g.strokeStyle='rgba(56,189,248,0.5)';g.lineWidth=1.5;
+  g.beginPath();g.moveTo(x-3,y);g.lineTo(x+w+3,y);g.stroke();
+  // scale marks on the side
+  const markCount=5;
+  for(let m=0;m<=markCount;m++){
+    const my=y+h*(m/markCount);
+    const ml=m%markCount===0?6:3;
+    g.strokeStyle='rgba(56,189,248,0.3)';g.lineWidth=.8;
+    g.beginPath();g.moveTo(x-3,my);g.lineTo(x-3-ml,my);g.stroke();
+    g.beginPath();g.moveTo(x+w+3,my);g.lineTo(x+w+3+ml,my);g.stroke();
+  }
+  g.restore();
+}
+
+// Draw flow arrow
+function drawFlowArrow(x1,y1,x2,y2,col,alpha,speed){
+  const len=Math.abs(x2-x1)||Math.abs(y2-y1);
+  const horiz=Math.abs(x2-x1)>Math.abs(y2-y1);
+  const dashL=8+spd*4,gapL=7+spd*2,period=dashL+gapL;
+  const off=(t*speed)%period;
+  g.save();
+  g.beginPath();g.rect(Math.min(x1,x2)-2,Math.min(y1,y2)-10,Math.abs(x2-x1)+4,Math.abs(y2-y1)+20);g.clip();
+  g.setLineDash([dashL,gapL]);g.lineDashOffset=-off;
+  g.strokeStyle=col;g.lineWidth=2+spd*.4;g.lineCap='round';g.globalAlpha=alpha;
+  g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();
+  g.setLineDash([]);
+  // arrowhead
+  const aw=7+spd,ah=4+spd*.4;
+  g.globalAlpha=alpha*1.3;g.fillStyle=col;
+  if(horiz){
+    const dir=x2>x1?1:-1;
+    g.beginPath();g.moveTo(x2+dir*3,y2);g.lineTo(x2+dir*3-dir*aw,y2-ah);g.lineTo(x2+dir*3-dir*aw,y2+ah);g.closePath();g.fill();
+  } else {
+    const dir=y2>y1?1:-1;
+    g.beginPath();g.moveTo(x2,y2+dir*3);g.lineTo(x2-ah,y2+dir*3-dir*aw);g.lineTo(x2+ah,y2+dir*3-dir*aw);g.closePath();g.fill();
+  }
+  g.globalAlpha=1;g.restore();
+}
+
+function drawIOLabel(x,y,txt,col,dir='→'){
+  g.save();g.font='bold 8px "Share Tech Mono",monospace';
+  const tw=g.measureText(txt).width;
+  const bw=tw+10,bh=13;
+  rr(x-bw/2,y-bh/2,bw,bh,3);g.fillStyle='rgba(4,8,16,0.9)';g.fill();
+  g.strokeStyle=col+'77';g.lineWidth=.6;g.stroke();
+  g.fillStyle=col;g.textAlign='center';g.textBaseline='middle';g.fillText(txt,x,y);g.restore();
+}
+
+function drawLabel(ax,ay,txt,col){
+  g.save();g.font='500 10px "DM Sans",sans-serif';
+  const tw=g.measureText(txt).width,bw=tw+10,bh=15,bx=ax+16,by=ay-bh/2;
+  g.beginPath();g.setLineDash([2,3]);g.strokeStyle=col+'44';g.lineWidth=.7;g.moveTo(ax,ay);g.lineTo(bx,ay);g.stroke();g.setLineDash([]);
+  g.beginPath();g.arc(ax,ay,2,0,Math.PI*2);g.fillStyle=col;g.fill();
+  rr(bx,by,bw,bh,3);g.fillStyle='rgba(4,8,16,0.92)';g.fill();
+  g.strokeStyle=col;g.lineWidth=.7;g.stroke();
+  g.fillStyle=col;g.textBaseline='middle';g.fillText(txt,bx+5,ay);g.restore();
+}
+
+// ── Main render ───────────────────────────────────────────────────
+function render(){
+  if(!cv.width||!cv.height)return;
+  const W=cv.width,H=cv.height;
+  g.clearRect(0,0,W,H);
+
+  const sc=getEffectiveSc();
+  const fc=getFC();
+  const topOpen=vTopPct>5,botOpen=vBotPct>5,drainOpen=vDrainPct>5;
+  const flowing=sc===3||sc===4||(sc<0&&topOpen&&botOpen);
+
+  // ── Layout ──
+  // Vessel: large circle left
+  const VCX=Math.round(W*.20), VCY=Math.round(H*.48), VR=Math.round(Math.min(W*.17,H*.33));
+  // Stand pipe: vertical tube between vessel and gauge glass
+  const SPX=Math.round(W*.44), SPY=Math.round(H*.18), SPW=Math.round(W*.036), SPH=Math.round(H*.65);
+  // Gauge glass column: vertical tube right
+  const GX=Math.round(W*.60), GY=Math.round(H*.18), GW=Math.round(W*.040), GH=Math.round(H*.65);
+  // Gate valves positions
+  const VT={cx:GX+GW/2, cy:GY-30};
+  const VB={cx:GX+GW/2, cy:GY+GH+30};
+  const VD={cx:GX+GW+90, cy:GY+GH+30};
+  const VALVE_R=Math.round(GW*.85);
+  // Pipe connections
+  const PIPE_Y_TOP=Math.round(SPY+SPH*.15);
+  const PIPE_Y_BOT=Math.round(SPY+SPH*.85);
+  const PIPE_H=12;
+  const PIPE_X1=VCX+VR*0.72;
+  const PIPE_X2=SPX;
+  const PIPE_X3=SPX+SPW;
+  const PIPE_X4=GX;
+  const DRAIN_PIPE_Y=GY+GH+30;
+
+  // Ball Check Valve positions — on bottom pipe (inlet, vessel→standpipe)
+  const BCV1_CX=Math.round((PIPE_X1+PIPE_X2)/2);
+  const BCV1_CY=PIPE_Y_BOT;
+  const BCV_R=PIPE_H*1.1;
+  // second BCV on standpipe→glass bottom pipe
+  const BCV2_CX=Math.round((PIPE_X3+PIPE_X4)/2);
+  const BCV2_CY=PIPE_Y_BOT;
+
+  // determine flowing state
+  const flowing_bot=botOpen&&lvlAnim>0.02;
+  const flowing_top=topOpen&&lvlAnim>0.55;
+
+  // ── Draw pipes first (background layer) ──
+  // vessel → stand pipe (top return)
+  drawPipe(PIPE_X1,PIPE_Y_TOP-PIPE_H/2,PIPE_X2-PIPE_X1,PIPE_H);
+  // stand pipe → glass (top return)
+  drawPipe(PIPE_X3,PIPE_Y_TOP-PIPE_H/2,PIPE_X4-PIPE_X3,PIPE_H);
+  // vessel → BCV1 (bottom inlet left segment)
+  drawPipe(PIPE_X1,PIPE_Y_BOT-PIPE_H/2,BCV1_CX-PIPE_X1-BCV_R*1.4,PIPE_H);
+  // BCV1 → stand pipe (bottom inlet right segment)
+  drawPipe(BCV1_CX+BCV_R*1.4,PIPE_Y_BOT-PIPE_H/2,PIPE_X2-(BCV1_CX+BCV_R*1.4),PIPE_H);
+  // stand pipe → BCV2 (bottom segment)
+  drawPipe(PIPE_X3,PIPE_Y_BOT-PIPE_H/2,BCV2_CX-PIPE_X3-BCV_R*1.4,PIPE_H);
+  // BCV2 → glass (bottom segment)
+  drawPipe(BCV2_CX+BCV_R*1.4,PIPE_Y_BOT-PIPE_H/2,PIPE_X4-(BCV2_CX+BCV_R*1.4),PIPE_H);
+
+  // vertical stubs above/below glass
+  drawPipe(GX+GW/2-7,GY-60,14,64);
+  drawPipe(GX+GW/2-7,GY+GH,14,65);
+
+  // drain pipe (horizontal right)
+  drawPipe(GX+GW,DRAIN_PIPE_Y-8,100,16);
+
+  // ── Vessel ──
+  drawVessel(VCX,VCY,VR);
+
+  // ── Ball Check Valves ──
+  drawBallCheckValve(BCV1_CX,BCV1_CY,BCV_R,flowing_bot,1);
+  drawBallCheckValve(BCV2_CX,BCV2_CY,BCV_R,flowing_bot,1);
+
+  // ── Stand Pipe ──
+  drawStandPipe(SPX,SPY,SPW,SPH,lvlAnim,sc,fc);
+
+  // ── Gate valves ──
+  drawGateValve(VT.cx,VT.cy,VALVE_R,vTopPct);
+  drawGateValve(VB.cx,VB.cy,VALVE_R,vBotPct);
+  drawGateValve(VD.cx,VD.cy,VALVE_R,vDrainPct);
+
+  // ── Gauge glass ──
+  drawGaugeGlass(GX,GY,GW,GH,lvlAnim,sc,fc);
+
+  // ── INLET flow arrows ──
+  if(flowing_bot){
+    const spd2=22+spd*14;
+    drawFlowArrow(PIPE_X1,PIPE_Y_BOT,BCV1_CX-BCV_R*1.5,PIPE_Y_BOT,'rgba(52,211,153,0.75)',1,spd2);
+    drawFlowArrow(BCV1_CX+BCV_R*1.5,PIPE_Y_BOT,PIPE_X2,PIPE_Y_BOT,'rgba(52,211,153,0.75)',1,spd2);
+    drawFlowArrow(PIPE_X3,PIPE_Y_BOT,BCV2_CX-BCV_R*1.5,PIPE_Y_BOT,'rgba(52,211,153,0.75)',1,spd2);
+    drawFlowArrow(BCV2_CX+BCV_R*1.5,PIPE_Y_BOT,PIPE_X4,PIPE_Y_BOT,'rgba(52,211,153,0.75)',1,spd2);
+    drawIOLabel(PIPE_X1+(BCV1_CX-PIPE_X1)*0.4,PIPE_Y_BOT-16,'INLET','#34d399');
+  }
+  if(flowing_top){
+    const spd2=22+spd*14;
+    drawFlowArrow(PIPE_X4,PIPE_Y_TOP,PIPE_X3,PIPE_Y_TOP,'rgba(248,113,113,0.7)',1,spd2);
+    drawFlowArrow(PIPE_X2,PIPE_Y_TOP,PIPE_X1,PIPE_Y_TOP,'rgba(248,113,113,0.7)',1,spd2);
+    drawIOLabel(PIPE_X3+(PIPE_X4-PIPE_X3)*.5,PIPE_Y_TOP-16,'OUTLET','#f87171');
+  }
+  // drain arrows
+  if(drainOpen&&lvlAnim>0){
+    drawFlowArrow(GX+GW,DRAIN_PIPE_Y,GX+GW+90,DRAIN_PIPE_Y,'rgba(245,158,11,0.7)',1,18+spd*12);
+    drawIOLabel(GX+GW+50,DRAIN_PIPE_Y-14,'DRAIN','#f59e0b');
+  }
+
+  // ── Equalizer level dashed line ──
+  if(lvlAnim>0.02&&sc!==6){
+    const levelY=SPY+SPH*(1-lvlAnim);
+    g.save();g.setLineDash([6,4]);
+    g.strokeStyle='rgba(56,189,248,0.20)';g.lineWidth=1;
+    g.beginPath();g.moveTo(VCX,levelY);g.lineTo(GX+GW+8,levelY);g.stroke();
+    g.setLineDash([]);g.restore();
+  }
+
+  // ── Labels ──
+  const l1=document.getElementById('l1')?.value||'Sight Glass Tube';
+  const l2=document.getElementById('l2')?.value||'Vessel / Column';
+  const l3=document.getElementById('l3')?.value||'Gate Valve';
+  const l4=document.getElementById('l4')?.value||'Float Indicator';
+  const l5=document.getElementById('l5')?.value||'Process Fluid';
+  const l6=document.getElementById('l6')?.value||'Stand Pipe';
+  const l7=document.getElementById('l7')?.value||'Ball Check Valve';
+  drawLabel(GX+GW+5,GY+GH*.4,l1,'#60a5fa');
+  drawLabel(VCX+VR*.45,VCY-VR*.65,l2,'#a78bfa');
+  drawLabel(VT.cx+VALVE_R+4,VT.cy,l3,'#fb923c');
+  if(lvlAnim>0.05&&sc!==6) drawLabel(GX+GW+5,GY+GH*(1-lvlAnim)-4,l4,'#34d399');
+  if(lvlAnim>0.1) drawLabel(GX+GW+5,GY+GH*.75,l5,'#f59e0b');
+  drawLabel(SPX+SPW+5,SPY+SPH*.3,l6,'#38bdf8');
+  drawLabel(BCV1_CX,BCV1_CY+BCV_R*2.2,l7,'#f472b6');
+  // valve name labels
+  const vnTop=document.getElementById('vname-top')?.value||'Top Block Valve';
+  const vnBot=document.getElementById('vname-bot')?.value||'Bottom Block Valve';
+  const vnDrain=document.getElementById('vname-drain')?.value||'Drain Valve';
+  drawLabel(VT.cx+VALVE_R+4,VT.cy+18,vnTop,'#94a3b8');
+  drawLabel(VB.cx+VALVE_R+4,VB.cy,vnBot,'#94a3b8');
+  drawLabel(VD.cx+VALVE_R+4,VD.cy,vnDrain,'#f59e0b');
+  // gas/liquid phase labels on vessel
+  const gasZoneY=VCY-VR*(0.25+vesselLvl*0.3);
+  if(vesselLvl<0.95) drawLabel(VCX+VR*0.5,gasZoneY,'Gas Phase','#60a5fa');
+  if(vesselLvl>0.08) drawLabel(VCX+VR*0.5,VCY+VR*(vesselLvl*0.4+0.1),'Liquid Phase','#34d399');
+
+  document.getElementById('fl').textContent=sc===6?'0%':(vTopPct<5&&vBotPct<5)?'—':Math.round(lvlAnim*100)+'%';
+}
+
+// ── Tick ──────────────────────────────────────────────────────────
+function tick(ts){
+  const dt=Math.min((ts-lastTs)/1000,.05);lastTs=ts;t=ts*.001;
+  const sc=getEffectiveSc();
+  const topOpen=vTopPct>5,botOpen=vBotPct>5,drainOpen=vDrainPct>5;
+  const flowing=sc===3||sc===4||(sc<0&&topOpen&&botOpen);
+
+  // ── Level physics ──
+  const topF=vTopPct/100, botF=vBotPct/100, drainF=vDrainPct/100;
+  if(sc===6||(!topOpen&&!botOpen)){
+    lvlAnim=drainOpen?Math.max(0,lvlAnim-drainF*0.2*dt):Math.max(0,lvlAnim-0.01*dt);
+  } else if(sc===1||(!topOpen&&botOpen)){
+    const target=0.28+botF*0.08+0.06*Math.sin(t*.55);
+    lvlAnim=lerp(lvlAnim,target,3*dt);
+  } else if(sc===2){
+    lvlAnim=Math.min(1,lvlAnim+(0.03+spd*0.04)*dt);
+  } else if(drainOpen&&(topOpen||botOpen)){
+    const inRate=botF*0.15, outRate=drainF*0.22;
+    lvlAnim=Math.max(0,Math.min(1,lvlAnim+(inRate-outRate)*spd*dt));
+  } else {
+    lvlAnim=Math.min(1,lvlAnim+0.35*dt);
+  }
+  // keep vesselLvl in sync with animated level so all 3 show same
+  vesselLvl=lvlAnim;
+
+  // ── Layout refs for particle bounds ──
+  const W=cv.width;
+  const GX=Math.round(W*.60),GY=Math.round(cv.height*.18),GW=Math.round(W*.042),GH=Math.round(cv.height*.65);
+  const gx=GX,gy=GY,gw=GW,gh=GH;
+  const fillTop=gy+gh*(1-lvlAnim);
+
+  // active count caps
+  let dotCount=0,bubCount=0;
+  pool.forEach(p=>{if(p.active){if(p.type===0)dotCount++;else bubCount++;}});
+  const maxD=Math.round(15+spd*10), maxB=Math.round(8+spd*10);
+
+  // spawn dots
+  if(flowing&&lvlAnim>0.05&&dotCount<maxD&&Math.random()<0.05+spd*0.07){
+    const p=getSlot();
+    if(p){p.active=true;p.type=0;p.x=gx+4+Math.random()*(gw-8);p.y=fillTop+gh*(.85+Math.random()*.13);p.vx=(Math.random()-.5)*.4*spd;p.vy=-(0.2+Math.random()*.3+spd*.3);p.r=0.7+Math.random()*(0.4+spd*.25);p.a=0.5+Math.random()*.4;p.life=0;}
+  }
+  // spawn bubbles (cavitation)
+  if(sc===4&&lvlAnim>0.05&&bubCount<maxB&&Math.random()<0.06+spd*0.09){
+    const p=getSlot();
+    if(p){p.active=true;p.type=1;p.x=gx+5+Math.random()*(gw-10);p.y=fillTop+gh*(.6+Math.random()*.38);p.vx=(Math.random()-.5)*spd*.5;p.vy=-(0.5+Math.random()*.7+spd*.35);p.r=1+Math.random()*(1.2+spd*.5);p.a=0.6+Math.random()*.3;p.life=0;}
+  }
+  if(sc===7&&sediment.length<80)sediment.push({x:gx+4+Math.random()*(gw-8),y:gy+6+Math.random()*gh*.9,r:.4+Math.random()*1.8,c:Math.round(20+Math.random()*50)});
+
+  // update
+  pool.forEach(p=>{
+    if(!p.active)return;
+    p.x+=p.vx*dt*60;p.y+=p.vy*dt*60;
+    if(p.type===1){p.x+=Math.sin(t*5+p.life*.1)*.35;p.r+=.006+spd*.002;}
+    p.a*=p.type===0?.986:.993;p.life++;
+    if(p.y<fillTop||p.x<gx||p.x>gx+gw||p.a<.04||p.life>280)p.active=false;
+  });
+
+  render();
+  raf=requestAnimationFrame(tick);
+}
+
+function init(){
+  resize();cancelAnimationFrame(raf);lastTs=0;lvlAnim=0;
+  // init slider styles
+  ['top','bot','drain'].forEach(id=>updateValveUI(id,0));
+  // add dynamic thumb-color style
+  const style=document.createElement('style');
+  style.textContent=`input[type=range].vslider::-webkit-slider-thumb{background:var(--tc,#ef4444)}`;
+  document.head.appendChild(style);
+  raf=requestAnimationFrame(tick);
+}
+
+const ro=new ResizeObserver(()=>resize());
+ro.observe(cv);
+window.addEventListener('load',init);
+</script>
+</body>
+</html>
